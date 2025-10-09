@@ -1,0 +1,61 @@
+type Contract {
+  id: ID!
+  filename: String!
+  uploadDate: String!
+  status: AnalysisStatus!
+  clauses: [Clause!]!
+  riskAssessment: RiskAssessment
+}
+
+enum AnalysisStatus {
+  uploaded
+  analyzing
+  completed
+  error
+}
+
+type Clause {
+  id: ID!
+  contract: Contract!
+  title: String
+  text: String!
+  risks: [Risk!]!
+}
+
+type Risk {
+  id: ID!
+  clause: Clause!
+  category: String!
+  severity: Severity!
+  details: String
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+type RiskAssessment {
+  contract: Contract!
+  riskCountBySeverity: RiskCountSummary!
+  risks: [Risk!]!
+}
+
+type RiskCountSummary {
+  low: Int!
+  medium: Int!
+  high: Int!
+  critical: Int!
+}
+
+type Query {
+  contracts(cursor: String): [Contract!]!
+}
+
+type Mutation {
+  uploadContract(filename: String!): Contract!
+  analyzeContract(id: ID!, sections: [String!]): RiskAssessment!
+}
+
