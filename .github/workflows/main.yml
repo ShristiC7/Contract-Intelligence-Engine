@@ -1,60 +1,63 @@
-name: CI/CD Pipeline
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
-  release:
-    types: [ published ]
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
-jobs:
-  test:
-    name: Test Suite
-    runs-on: ubuntu-latest
-    
-    services:
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-
-    steps:
+  name: CI/CD Pipeline
+  
+  on:
+    push:
+      branches: [ main, develop ]
+    pull_request:
+      branches: [ main, develop ]
+    release:
+      types: [ published ]
+  
+  env:
+    REGISTRY: ghcr.io
+    IMAGE_NAME: ${{ github.repository }}
+  
+  jobs:
+    test:
+      name: Test Suite
+      runs-on: ubuntu-latest
+      
+      services:
+        redis:
+          image: redis:7-alpine
+          ports:
+            - 6379:6379
+          options: >-
+            --health-cmd "redis-cli ping"
+            --health-interval 10s
+            --health-timeout 5s
+            --health-retries 10
+  
+      steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node.js + Corepack
+  
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - name: Enable Corepack & Install pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@9.10.0 --activate
-          pnpm -v
-
+          node-version: '20'
+  
+      - name: Install pnpm globally
+        run: npm install -g pnpm@9.10.0
+  
+      - name: Verify pnpm
+        run: pnpm -v
+  
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
+  
       - name: Generate Prisma Client
         run: pnpm --filter apps/api prisma:generate
-
+  
       - name: Run unit tests with coverage
-        run: pnpm --filter apps/api test:coverage
+        run: |
+          set -e
+          pnpm --filter apps/api test:coverage
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
           REDIS_HOST: localhost
           REDIS_PORT: 6379
-
+  
       - name: Check coverage threshold
         run: |
           sudo apt-get update && sudo apt-get install -y jq bc
@@ -66,9 +69,11 @@ jobs:
           else
             echo "✅ Coverage $COVERAGE% meets 80% threshold"
           fi
-
+  
       - name: Run integration tests
-        run: pnpm --filter apps/api test:integration
+        run: |
+          set -e
+          pnpm --filter apps/api test:integration
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
