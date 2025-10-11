@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
@@ -8,3 +9,15 @@
   "exclude": ["node_modules", "dist"]
 }
 
+=======
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
+
+>>>>>>> 3d06af91a49dadb5b6c6f18371ea05b6636ff22e
