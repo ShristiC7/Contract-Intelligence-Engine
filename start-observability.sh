@@ -60,5 +60,8 @@ else
   echo "Check the logs with: docker-compose -f docker-compose.legal-agent.yml logs"
   exit 1
 fi
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 3d06af91a49dadb5b6c6f18371ea05b6636ff22e

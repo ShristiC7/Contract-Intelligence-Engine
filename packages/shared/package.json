@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "name": "@cie/shared",
   "version": "0.1.0",
@@ -25,3 +26,32 @@
   }
 }
 
+=======
+{
+  "name": "@cie/shared",
+  "version": "0.1.0",
+  "private": true,
+  "types": "dist/index.d.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --dts --format cjs,esm --out-dir dist",
+    "dev": "tsup src/index.ts --dts --format cjs,esm --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "tsup": "^8.2.4",
+    "typescript": "^5.6.2",
+    "@types/node": "^20.11.30"
+  }
+}
+
+>>>>>>> 3d06af91a49dadb5b6c6f18371ea05b6636ff22e

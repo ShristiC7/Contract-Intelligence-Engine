@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "$schema": "https://turbo.build/schema.json",
   "pipeline": {
@@ -20,3 +21,27 @@
   }
 }
 
+=======
+{
+  "$schema": "https://turbo.build/schema.json",
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**"]
+    },
+    "dev": {
+      "cache": false
+    },
+    "lint": {
+      "outputs": []
+    },
+    "typecheck": {
+      "outputs": []
+    },
+    "test": {
+      "outputs": ["coverage/**"]
+    }
+  }
+}
+
+>>>>>>> 3d06af91a49dadb5b6c6f18371ea05b6636ff22e
