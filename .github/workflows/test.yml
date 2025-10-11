@@ -22,61 +22,58 @@ jobs:
           --health-retries 5
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-    
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 9.10.0
-    
-    - name: Verify pnpm installation
-      run: pnpm -v
+      - uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: pnpm install
+      - name: Setup Node.js + Corepack
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-    - name: Generate Prisma Client
-      run: cd apps/api && pnpm prisma:generate
-      env:
-        DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+      - name: Enable Corepack & Install pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.10.0 --activate
+          pnpm -v
 
-    - name: Run unit tests
-      run: cd apps/api && pnpm test:unit
-      env:
-        NODE_ENV: test
-        DATABASE_URL: postgresql://test:test@localhost:5432/test_db
-        REDIS_HOST: localhost
-        REDIS_PORT: 6379
+      - name: Install dependencies
+        run: pnpm install
 
-    - name: Run integration tests
-      run: cd apps/api && pnpm test:integration
-      env:
-        NODE_ENV: test
-        DATABASE_URL: postgresql://test:test@localhost:5432/test_db
-        REDIS_HOST: localhost
-        REDIS_PORT: 6379
+      - name: Generate Prisma Client
+        run: pnpm --filter apps/api prisma:generate
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
 
-    - name: Run tests with coverage
-      run: cd apps/api && pnpm test:coverage
-      env:
-        NODE_ENV: test
-        DATABASE_URL: postgresql://test:test@localhost:5432/test_db
-        REDIS_HOST: localhost
-        REDIS_PORT: 6379
+      - name: Run unit tests
+        run: pnpm --filter apps/api test:unit
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
 
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v4
-      with:
-        files: ./apps/api/coverage/lcov.info
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+      - name: Run integration tests
+        run: pnpm --filter apps/api test:integration
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+      - name: Run tests with coverage
+        run: pnpm --filter apps/api test:coverage
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./apps/api/coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
 
   load-test:
     runs-on: ubuntu-latest
@@ -95,97 +92,91 @@ jobs:
           --health-retries 5
     
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-    
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 9.10.0
+      - uses: actions/checkout@v4
 
-    - name: Verify pnpm
-      run: pnpm -v
-    
-    - name: Install dependencies
-      run: pnpm install
+      - name: Setup Node.js + Corepack
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-    - name: Generate Prisma Client
-      run: cd apps/api && pnpm prisma:generate
-      env:
-        DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+      - name: Enable Corepack & Install pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.10.0 --activate
+          pnpm -v
 
-    - name: Start API server
-      run: |
-        cd apps/api
-        pnpm build
-        pnpm prisma:migrate
-        pnpm start &
-        sleep 10
-      env:
-        NODE_ENV: production
-        DATABASE_URL: postgresql://test:test@localhost:5432/test_db
-        REDIS_HOST: localhost
-        REDIS_PORT: 6379
-        PORT: 4000
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Generate Prisma Client
+        run: pnpm --filter apps/api prisma:generate
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+
+      - name: Start API server
+        run: |
+          pnpm --filter apps/api build
+          pnpm --filter apps/api prisma:migrate
+          pnpm --filter apps/api start &
+          sleep 10
+        env:
+          NODE_ENV: production
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          PORT: 4000
     
-    - name: Install k6
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gnupg2
-        curl -s https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
-        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-        sudo apt-get update
-        sudo apt-get install -y k6
-    
-    - name: Run load tests
-      run: cd apps/api && k6 run tests/load/contract-analysis.js
-      env:
-        API_URL: http://localhost:4000
-    
-    - name: Upload load test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: k6-results
-        path: apps/api/k6-results.json
+      - name: Install k6
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnupg2
+          curl -s https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Run load tests
+        run: k6 run apps/api/tests/load/contract-analysis.js
+        env:
+          API_URL: http://localhost:4000
+
+      - name: Upload load test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-results
+          path: apps/api/k6-results.json
 
   docker-test:
     runs-on: ubuntu-latest
     needs: test
 
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-    
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 9.10.0
-    
-    - name: Install dependencies
-      run: pnpm install
+      - uses: actions/checkout@v4
 
-    - name: Generate Prisma Client
-      run: cd apps/api && pnpm prisma:generate
-      env:
-        DATABASE_URL: postgresql://test:test@localhost:5432/test_db
-    
-    - name: Build Docker image
-      run: |
-        cd apps/api
-        docker build -t contract-intelligence-api .
+      - name: Setup Node.js + Corepack
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-    - name: Run Docker tests
-      run: |
-        cd apps/api
-        docker-compose -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from test
-      env:
-        NODE_ENV: test
+      - name: Enable Corepack & Install pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.10.0 --activate
+          pnpm -v
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Generate Prisma Client
+        run: pnpm --filter apps/api prisma:generate
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+
+      - name: Build Docker image
+        run: docker build -t contract-intelligence-api apps/api
+
+      - name: Run Docker tests
+        run: docker-compose -f apps/api/docker-compose.test.yml up --abort-on-container-exit --exit-code-from test
+        env:
+          NODE_ENV: test
