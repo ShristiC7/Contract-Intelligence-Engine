@@ -32,19 +32,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Setup Node.js
+   - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         cache: 'pnpm'
-    
-    - name: Install pnpm
-      uses: pnpm/action-setup@v2
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v3
       with:
-        version: 9.10.0
-    
+        version: 9
+
     - name: Install dependencies
-      run: pnpm install
+      run: pnpm install --frozen-lockfile
+
     
     - name: Generate Prisma Client
       run: cd apps/api && pnpm prisma:generate
