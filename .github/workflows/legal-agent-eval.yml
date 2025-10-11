@@ -83,12 +83,13 @@ jobs:
         fi
     
     - name: Upload evaluation results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: ragas-evaluation-results
         path: apps/api/src/legal-agent/golden_set.json
         retention-days: 30
+
 
   integration-test:
     runs-on: ubuntu-latest
