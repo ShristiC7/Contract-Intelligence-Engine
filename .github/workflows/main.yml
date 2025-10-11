@@ -29,97 +29,91 @@ jobs:
           --health-retries 10
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'pnpm'
+      - name: Setup Node.js + Corepack
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Enable Corepack & Install pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.10.0 --activate
+          pnpm -v
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 9.10.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      - name: Generate Prisma Client
+        run: pnpm --filter apps/api prisma:generate
 
-    - name: Generate Prisma Client
-      run: pnpm --filter apps/api prisma:generate
+      - name: Run unit tests with coverage
+        run: pnpm --filter apps/api test:coverage
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
 
-    - name: Run unit tests with coverage
-      run: |
-        set -e
-        pnpm --filter apps/api test:coverage
-      env:
-        NODE_ENV: test
-        DATABASE_URL: postgresql://test:test@localhost:5432/test_db
-        REDIS_HOST: localhost
-        REDIS_PORT: 6379
+      - name: Check coverage threshold
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq bc
+          COVERAGE=$(cat apps/api/coverage/coverage-summary.json | jq '.total.lines.pct')
+          echo "Coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "❌ Coverage $COVERAGE% is below 80% threshold"
+            exit 1
+          else
+            echo "✅ Coverage $COVERAGE% meets 80% threshold"
+          fi
 
-    - name: Check coverage threshold
-      run: |
-        sudo apt-get update && sudo apt-get install -y jq bc
-        COVERAGE=$(cat apps/api/coverage/coverage-summary.json | jq '.total.lines.pct')
-        echo "Coverage: $COVERAGE%"
-        if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-          echo "❌ Coverage $COVERAGE% is below 80% threshold"
-          exit 1
-        else
-          echo "✅ Coverage $COVERAGE% meets 80% threshold"
-        fi
+      - name: Run integration tests
+        run: pnpm --filter apps/api test:integration
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
 
-    - name: Run integration tests
-      run: |
-        set -e
-        pnpm --filter apps/api test:integration
-      env:
-        NODE_ENV: test
-        DATABASE_URL: postgresql://test:test@localhost:5432/test_db
-        REDIS_HOST: localhost
-        REDIS_PORT: 6379
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
 
-    - name: Install k6
-      run: |
-        sudo gpg -k
-        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-        sudo apt-get update
-        sudo apt-get install -y k6
+      - name: Start API server for load tests
+        run: |
+          pnpm --filter apps/api build
+          pnpm --filter apps/api start &
+          sleep 10
+        env:
+          NODE_ENV: production
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          PORT: 4000
 
-    - name: Start API server for load tests
-      run: |
-        set -e
-        pnpm --filter apps/api build
-        pnpm --filter apps/api start &
-        sleep 10
-      env:
-        NODE_ENV: production
-        DATABASE_URL: postgresql://test:test@localhost:5432/test_db
-        REDIS_HOST: localhost
-        REDIS_PORT: 6379
-        PORT: 4000
+      - name: Run k6 load tests
+        run: pnpm --filter apps/api k6 run tests/load/contract-analysis.js
+        env:
+          API_URL: http://localhost:4000
 
-    - name: Run k6 load tests
-      run: pnpm --filter apps/api k6 run tests/load/contract-analysis.js
-      env:
-        API_URL: http://localhost:4000
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./apps/api/coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
 
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./apps/api/coverage/lcov.info
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
-
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results
-        path: |
-          apps/api/coverage/
-          apps/api/k6-results.json
-        retention-days: 30
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            apps/api/coverage/
+            apps/api/k6-results.json
+          retention-days: 30
