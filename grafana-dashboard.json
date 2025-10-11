@@ -1,0 +1,434 @@
+{
+  "dashboard": {
+    "title": "Contract Intelligence Engine - Service Observability",
+    "uid": "contract-intelligence-observability",
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "rate(http_server_duration_count{service_name=\"contract-intelligence-api\"}[5m])",
+            "legendFormat": "{{method}} {{route}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "spanNulls": false,
+              "showPoints": "never"
+            },
+            "unit": "reqps"
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "P95 Latency",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "histogram_quantile(0.95, rate(http_server_duration_bucket{service_name=\"contract-intelligence-api\"}[5m]))",
+            "legendFormat": "{{method}} {{route}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "spanNulls": false,
+              "showPoints": "never"
+            },
+            "unit": "s",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": null,
+                  "color": "green"
+                },
+                {
+                  "value": 10,
+                  "color": "yellow"
+                },
+                {
+                  "value": 12,
+                  "color": "red"
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Queue Depth",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 0,
+          "y": 8,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "bullmq_queue_waiting{service_name=\"contract-intelligence-api\"}",
+            "legendFormat": "{{queue_name}} - waiting"
+          },
+          {
+            "refId": "B",
+            "expr": "bullmq_queue_active{service_name=\"contract-intelligence-api\"}",
+            "legendFormat": "{{queue_name}} - active"
+          },
+          {
+            "refId": "C",
+            "expr": "bullmq_queue_delayed{service_name=\"contract-intelligence-api\"}",
+            "legendFormat": "{{queue_name}} - delayed"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20,
+              "spanNulls": false,
+              "showPoints": "never",
+              "stacking": {
+                "mode": "normal"
+              }
+            },
+            "unit": "short"
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "RAGAS Evaluation Scores",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 12,
+          "y": 8,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "ragas_faithfulness_score{service_name=\"legal-agent\"}",
+            "legendFormat": "Faithfulness"
+          },
+          {
+            "refId": "B",
+            "expr": "ragas_answer_relevancy_score{service_name=\"legal-agent\"}",
+            "legendFormat": "Answer Relevancy"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "spanNulls": false,
+              "showPoints": "auto"
+            },
+            "unit": "short",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": null,
+                  "color": "red"
+                },
+                {
+                  "value": 0.6,
+                  "color": "yellow"
+                },
+                {
+                  "value": 0.8,
+                  "color": "green"
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "min", "max", "lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Embedding Cache Performance",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 0,
+          "y": 16,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "embedding_cache_hit_rate{service_name=\"contract-intelligence-api\"}",
+            "legendFormat": "Cache Hit Rate"
+          },
+          {
+            "refId": "B",
+            "expr": "rate(embedding_cache_hits_total{service_name=\"contract-intelligence-api\"}[5m])",
+            "legendFormat": "Cache Hits/sec"
+          },
+          {
+            "refId": "C",
+            "expr": "rate(embedding_cache_misses_total{service_name=\"contract-intelligence-api\"}[5m])",
+            "legendFormat": "Cache Misses/sec"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "spanNulls": false,
+              "showPoints": "never"
+            },
+            "unit": "short"
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Legal Agent Performance",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 12,
+          "y": 16,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "rate(http_server_duration_count{service_name=\"legal-agent\"}[5m])",
+            "legendFormat": "{{method}} {{route}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "spanNulls": false,
+              "showPoints": "never"
+            },
+            "unit": "reqps"
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Database Performance",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 0,
+          "y": 24,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "histogram_quantile(0.95, rate(prisma_query_duration_bucket[5m]))",
+            "legendFormat": "P95 Query Duration"
+          },
+          {
+            "refId": "B",
+            "expr": "prisma_client_connections_active",
+            "legendFormat": "Active Connections"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "spanNulls": false,
+              "showPoints": "never"
+            },
+            "unit": "s"
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Job Processing Metrics",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 12,
+          "y": 24,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "histogram_quantile(0.95, rate(job_duration_bucket[5m]))",
+            "legendFormat": "{{job_name}} P95"
+          },
+          {
+            "refId": "B",
+            "expr": "rate(job_duration_count{status=\"error\"}[5m])",
+            "legendFormat": "{{job_name}} Errors/sec"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "spanNulls": false,
+              "showPoints": "never"
+            },
+            "unit": "ms"
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "lastNotNull"]
+          }
+        }
+      }
+    ]
+  }
+}
