@@ -1,0 +1,175 @@
+openapi: 3.1.0
+info:
+  title: Contract Analysis API
+  version: "1.0.0"
+  description: API for uploading, listing, and analyzing contracts
+
+servers:
+  - url: https://api.example.com
+    description: Production server
+  - url: http://localhost:3000
+    description: Local dev
+
+components:
+  schemas:
+    Contract:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        uploadDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [uploaded, analyzing, completed, error]
+      required:
+        - id
+        - filename
+        - uploadDate
+        - status
+
+    ContractListItem:
+      allOf:
+        - $ref: "#/components/schemas/Contract"
+        - type: object
+
+    ContractListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContractListItem"
+        cursor:
+          type: string
+          nullable: true
+        hasMore:
+          type: boolean
+      required:
+        - items
+        - hasMore
+
+    UploadContractRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+      required:
+        - file
+
+    AnalyzeRequest:
+      type: object
+      properties:
+        sections:
+          type: array
+          items:
+            type: string
+          description: Optional list of section names to analyze (if omitted, analyze whole)
+      required: []
+
+    AnalyzeResponse:
+      type: object
+      properties:
+        contractId:
+          type: string
+        riskSummary:
+          type: object
+        clauseCount:
+          type: integer
+      required:
+        - contractId
+        - riskSummary
+        - clauseCount
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
+
+  parameters:
+    cursorParam:
+      name: cursor
+      in: query
+      schema:
+        type: string
+      description: Cursor for pagination
+
+paths:
+  /contracts:
+    post:
+      summary: Upload a new contract
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/UploadContractRequest"
+      responses:
+        "201":
+          description: Contract uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    get:
+      summary: List uploaded contracts (cursor pagination)
+      parameters:
+        - $ref: "#/components/parameters/cursorParam"
+      responses:
+        "200":
+          description: List of contracts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractListResponse"
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /contracts/{id}/analyze:
+    post:
+      summary: Trigger analysis on a contract
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeRequest"
+      responses:
+        "200":
+          description: Analysis result or job result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyzeResponse"
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"

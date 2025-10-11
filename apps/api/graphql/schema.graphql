@@ -1,0 +1,51 @@
+type Contract {
+  id: ID!
+  filename: String!
+  uploadDate: String!  # ISO timestamp
+  status: AnalysisStatus!
+  clauses: [Clause!]!     # list of clauses
+  riskAssessment: RiskAssessment  # may be null until analysis done
+}
+
+enum AnalysisStatus {
+  uploaded
+  analyzing
+  completed
+  error
+}
+
+type Clause {
+  id: ID!
+  contract: Contract!
+  title: String
+  text: String!
+  risks: [Risk!]!
+}
+
+type Risk {
+  id: ID!
+  clause: Clause!
+  category: String!
+  severity: Severity!
+  details: String
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+type RiskAssessment {
+  contract: Contract!
+  riskCountBySeverity: RiskCountSummary!
+  risks: [Risk!]!
+}
+
+type RiskCountSummary {
+  low: Int!
+  medium: Int!
+  high: Int!
+  critical: Int!
+}

@@ -1,0 +1,123 @@
+groups:
+  - name: service_latency_alerts
+    interval: 1m
+    rules:
+      - alert: HighP95Latency
+        expr: |
+          histogram_quantile(0.95, 
+            rate(http_server_duration_bucket{service_name="contract-intelligence-api"}[5m])
+          ) > 12
+        for: 5m
+        labels:
+          severity: critical
+          service: contract-intelligence-api
+        annotations:
+          summary: "High P95 latency detected"
+          description: "P95 latency for {{ $labels.route }} has been above 12 seconds for more than 5 minutes. Current value: {{ $value }}s"
+          runbook_url: "https://wiki.example.com/runbooks/high-latency"
+      
+      - alert: HighP95LatencyWarning
+        expr: |
+          histogram_quantile(0.95, 
+            rate(http_server_duration_bucket{service_name="contract-intelligence-api"}[5m])
+          ) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: contract-intelligence-api
+        annotations:
+          summary: "Elevated P95 latency detected"
+          description: "P95 latency for {{ $labels.route }} has been above 10 seconds for more than 5 minutes. Current value: {{ $value }}s"
+
+  - name: job_processing_alerts
+    interval: 1m
+    rules:
+      - alert: HighJobFailureRate
+        expr: |
+          rate(job_duration_count{status="error"}[5m]) 
+          / 
+          rate(job_duration_count[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: contract-intelligence-api
+        annotations:
+          summary: "High job failure rate"
+          description: "Job {{ $labels.job_name }} has a failure rate above 10% for 5 minutes"
+
+      - alert: QueueBacklog
+        expr: bullmq_queue_waiting{service_name="contract-intelligence-api"} > 1000
+        for: 10m
+        labels:
+          severity: warning
+          service: contract-intelligence-api
+        annotations:
+          summary: "Queue backlog detected"
+          description: "Queue {{ $labels.queue_name }} has more than 1000 waiting jobs"
+
+  - name: cache_performance_alerts
+    interval: 1m
+    rules:
+      - alert: LowCacheHitRate
+        expr: embedding_cache_hit_rate{service_name="contract-intelligence-api"} < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          service: contract-intelligence-api
+        annotations:
+          summary: "Low embedding cache hit rate"
+          description: "Cache hit rate has been below 50% for 10 minutes. Current: {{ $value }}"
+
+  - name: legal_agent_alerts
+    interval: 1m
+    rules:
+      - alert: LegalAgentHighLatency
+        expr: |
+          histogram_quantile(0.95, 
+            rate(http_server_duration_bucket{service_name="legal-agent"}[5m])
+          ) > 15
+        for: 5m
+        labels:
+          severity: warning
+          service: legal-agent
+        annotations:
+          summary: "Legal agent high latency"
+          description: "Legal agent P95 latency has been above 15 seconds for 5 minutes. Current: {{ $value }}s"
+
+      - alert: RAGASScoreBelowThreshold
+        expr: ragas_faithfulness_score{service_name="legal-agent"} < 0.85
+        for: 5m
+        labels:
+          severity: critical
+          service: legal-agent
+        annotations:
+          summary: "RAGAS faithfulness below threshold"
+          description: "RAGAS faithfulness score has been below 0.85 for 5 minutes. Current: {{ $value }}"
+
+  - name: database_alerts
+    interval: 1m
+    rules:
+      - alert: DatabaseConnectionHigh
+        expr: prisma_client_connections_active > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: contract-intelligence-api
+        annotations:
+          summary: "High database connection count"
+          description: "Database has more than 80 active connections. Current: {{ $value }}"
+
+      - alert: DatabaseSlowQueries
+        expr: |
+          histogram_quantile(0.95, 
+            rate(prisma_query_duration_bucket[5m])
+          ) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: contract-intelligence-api
+        annotations:
+          summary: "Slow database queries detected"
+          description: "P95 database query time has been above 5 seconds for 5 minutes. Current: {{ $value }}s"
+
+

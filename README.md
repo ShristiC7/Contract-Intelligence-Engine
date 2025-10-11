@@ -1,3 +1,7 @@
+Turborepo Monorepo Setup
+
+This repository contains a Turborepo-based monorepo with two applications (`apps/web` and `apps/api`) and a shared package (`packages/shared`). Follow the README sections inside to develop locally or with Docker.
+
 # ⚖️ Contract Intelligence Engine  
 **AI-Powered Legal Document Understanding with Multi-Step Reasoning & Citation Verification**
 
