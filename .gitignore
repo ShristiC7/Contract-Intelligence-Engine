@@ -1,0 +1,21 @@
+# Node.js & build outputs
+node_modules/
+dist/
+.next/
+out/
+build/
+.cache/
+.cursor/
+.env
+.env.local
+.env.production
+
+# Logs and temp files
+*.log
+*.tmp
+.DS_Store
+
+# Supabase / artifacts
+.supabase/
+storage/
+uploads/
