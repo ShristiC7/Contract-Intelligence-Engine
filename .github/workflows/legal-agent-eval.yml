@@ -122,14 +122,20 @@ jobs:
         PG_PASSWORD: postgres
       run: |
         set -e
-        python - <<EOF
+ python <<EOF
 from legal_agent import Config, PgVectorStore, LegalReActAgent
+import json
+
 config = Config()
 vector_store = PgVectorStore(config)
 agent = LegalReActAgent(config, vector_store)
+
+# Test a simple query
 result = agent.run('What are the liability terms?')
 print('Agent test result:', result.get('output', 'No output'))
+
 vector_store.close()
+print('✅ Integration test passed')
 EOF
 
     - name: Test tools individually
