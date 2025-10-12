@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Contract {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  fileHash  String   @map("file_hash")
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  clauses             Clause[]
+  analysisCheckpoints AnalysisCheckpoint[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([fileHash])
+  @@map("contracts")
+}
+
+model Clause {
+  id         String  @id @default(cuid())
+  contractId String  @map("contract_id")
+  type       String
+  text       String
+  riskScore  Float?  @map("risk_score")
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+  @@index([type])
+  @@map("clauses")
+}
+
+model AnalysisCheckpoint {
+  id         String   @id @default(cuid())
+  contractId String   @map("contract_id")
+  step       String
+  data       String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+  @@index([step])
+  @@map("analysis_checkpoints")
+}
+

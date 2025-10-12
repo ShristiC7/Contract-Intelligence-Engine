@@ -1,0 +1,589 @@
+{
+  "tech_stack": [
+    "TypeScript",
+    "Node.js",
+    "Fastify",
+    "Next.js",
+    "React",
+    "PostgreSQL",
+    "Redis",
+    "Prisma",
+    "Docker",
+    "OpenTelemetry",
+    "Python",
+    "LangChain",
+    "OpenAI",
+    "pgvector"
+  ],
+  "features": [
+    {
+      "name": "Contract Management API",
+      "description": "API for uploading, listing, and managing contracts with file upload support",
+      "files": [
+        "apps/api/src/routes/contracts.ts",
+        "apps/api/src/jobs/analyzeContract.ts"
+      ],
+      "api_doc": {
+        "openapi": "3.1.0",
+        "info": {
+          "title": "Contract Management API",
+          "version": "1.0.0",
+          "description": "API for uploading, listing, and analyzing contracts"
+        },
+        "paths": {
+          "/contracts": {
+            "post": {
+              "summary": "Upload a new contract",
+              "requestBody": {
+                "content": {
+                  "multipart/form-data": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "file": {
+                          "type": "string",
+                          "format": "binary"
+                        }
+                      },
+                      "required": ["file"]
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "201": {
+                  "description": "Contract uploaded successfully",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "id": {"type": "string", "format": "uuid"},
+                          "filename": {"type": "string"},
+                          "uploadDate": {"type": "string", "format": "date-time"},
+                          "status": {"type": "string", "enum": ["uploaded", "analyzing", "completed", "error"]}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "get": {
+              "summary": "List uploaded contracts with pagination",
+              "parameters": [
+                {
+                  "name": "cursor",
+                  "in": "query",
+                  "schema": {"type": "string"},
+                  "description": "Cursor for pagination"
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "List of contracts",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {"type": "string"},
+                                "filename": {"type": "string"},
+                                "uploadDate": {"type": "string"},
+                                "status": {"type": "string"}
+                              }
+                            }
+                          },
+                          "cursor": {"type": "string", "nullable": true},
+                          "hasMore": {"type": "boolean"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/contracts/{id}/analyze": {
+            "post": {
+              "summary": "Trigger analysis on a contract",
+              "parameters": [
+                {
+                  "name": "id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {"type": "string"}
+                }
+              ],
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "sections": {
+                          "type": "array",
+                          "items": {"type": "string"}
+                        },
+                        "filePath": {"type": "string"}
+                      }
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "Analysis result or job result",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "contractId": {"type": "string"},
+                          "riskSummary": {"type": "object"},
+                          "clauseCount": {"type": "integer"},
+                          "jobId": {"type": "string"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/status/{jobId}": {
+            "get": {
+              "summary": "Get job status",
+              "parameters": [
+                {
+                  "name": "jobId",
+                  "in": "path",
+                  "required": true,
+                  "schema": {"type": "string"}
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Job status",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "id": {"type": "string"},
+                          "status": {"type": "string"},
+                          "progress": {"type": "number"},
+                          "result": {"type": "object"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Legal Agent API",
+      "description": "AI-powered legal document analysis with clause extraction, risk scoring, and comprehensive analysis",
+      "files": [
+        "apps/api/src/routes/legalAgent.ts",
+        "apps/api/src/services/legalAgentService.ts",
+        "apps/api/src/legal-agent/legal_agent.py",
+        "apps/api/src/legal-agent/legal_api.py"
+      ],
+      "api_doc": {
+        "openapi": "3.1.0",
+        "info": {
+          "title": "Legal Agent API",
+          "version": "1.0.0",
+          "description": "AI-powered legal document analysis API"
+        },
+        "paths": {
+          "/legal-agent/health": {
+            "get": {
+              "summary": "Health check for legal agent service",
+              "responses": {
+                "200": {
+                  "description": "Service health status",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "status": {"type": "string", "enum": ["healthy", "unhealthy", "error"]},
+                          "service": {"type": "string"},
+                          "timestamp": {"type": "string", "format": "date-time"},
+                          "error": {"type": "string"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/legal-agent/analyze": {
+            "post": {
+              "summary": "Analyze document with legal agent",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "document_text": {"type": "string"},
+                        "analysis_type": {
+                          "type": "string",
+                          "enum": ["comprehensive", "clauses_only", "risk_only"],
+                          "default": "comprehensive"
+                        }
+                      },
+                      "required": ["document_text"]
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "Analysis result",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "analysis": {"type": "object"},
+                          "clauses": {"type": "array"},
+                          "risks": {"type": "array"},
+                          "summary": {"type": "string"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/legal-agent/extract-clauses": {
+            "post": {
+              "summary": "Extract clauses from document",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "document_text": {"type": "string"}
+                      },
+                      "required": ["document_text"]
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "Extracted clauses",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "clauses": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "type": {"type": "string"},
+                                "text": {"type": "string"},
+                                "confidence": {"type": "number"}
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/legal-agent/search-clauses": {
+            "post": {
+              "summary": "Search for similar clauses",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "query": {"type": "string"},
+                        "limit": {"type": "integer", "default": 5}
+                      },
+                      "required": ["query"]
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "Similar clauses",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "results": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "clause": {"type": "string"},
+                                "similarity": {"type": "number"},
+                                "source": {"type": "string"}
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/legal-agent/score-risk": {
+            "post": {
+              "summary": "Score risk of a clause",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "clause_text": {"type": "string"}
+                      },
+                      "required": ["clause_text"]
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "Risk score",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "risk_score": {"type": "number"},
+                          "risk_level": {"type": "string"},
+                          "factors": {"type": "array"},
+                          "recommendations": {"type": "array"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/legal-agent/stats": {
+            "get": {
+              "summary": "Get system statistics",
+              "responses": {
+                "200": {
+                  "description": "System statistics",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "total_documents": {"type": "integer"},
+                          "total_clauses": {"type": "integer"},
+                          "average_risk_score": {"type": "number"},
+                          "last_analysis": {"type": "string", "format": "date-time"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/legal-agent/comprehensive-analysis": {
+            "post": {
+              "summary": "Comprehensive document analysis",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "document_text": {"type": "string"}
+                      },
+                      "required": ["document_text"]
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "Comprehensive analysis result",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "summary": {"type": "string"},
+                          "clauses": {"type": "array"},
+                          "risks": {"type": "array"},
+                          "recommendations": {"type": "array"},
+                          "confidence": {"type": "number"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "GraphQL API",
+      "description": "GraphQL endpoint for contract and legal agent operations",
+      "files": [
+        "apps/api/src/graphql/index.ts",
+        "apps/api/src/graphql/schema.graphql"
+      ],
+      "api_doc": {
+        "openapi": "3.1.0",
+        "info": {
+          "title": "GraphQL API",
+          "version": "1.0.0",
+          "description": "GraphQL endpoint for contract intelligence operations"
+        },
+        "paths": {
+          "/graphql": {
+            "post": {
+              "summary": "GraphQL endpoint",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "query": {"type": "string"},
+                        "variables": {"type": "object"},
+                        "operationName": {"type": "string"}
+                      },
+                      "required": ["query"]
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "GraphQL response",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "data": {"type": "object"},
+                          "errors": {"type": "array"},
+                          "extensions": {"type": "object"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Web Frontend",
+      "description": "Next.js React frontend for contract intelligence dashboard",
+      "files": [
+        "apps/web/app/page.tsx",
+        "apps/web/app/layout.tsx",
+        "apps/web/app/globals.css"
+      ],
+      "api_doc": {
+        "openapi": "3.1.0",
+        "info": {
+          "title": "Web Frontend",
+          "version": "1.0.0",
+          "description": "Next.js React frontend application"
+        },
+        "paths": {
+          "/": {
+            "get": {
+              "summary": "Main dashboard page",
+              "responses": {
+                "200": {
+                  "description": "Dashboard HTML page",
+                  "content": {
+                    "text/html": {
+                      "schema": {"type": "string"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Health Check API",
+      "description": "System health monitoring endpoints",
+      "files": [
+        "apps/api/src/index.ts"
+      ],
+      "api_doc": {
+        "openapi": "3.1.0",
+        "info": {
+          "title": "Health Check API",
+          "version": "1.0.0",
+          "description": "System health monitoring"
+        },
+        "paths": {
+          "/health": {
+            "get": {
+              "summary": "System health check",
+              "responses": {
+                "200": {
+                  "description": "Health status",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "status": {"type": "string", "enum": ["ok", "error"]}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
+
+

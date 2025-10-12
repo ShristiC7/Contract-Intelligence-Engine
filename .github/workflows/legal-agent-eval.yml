@@ -1,0 +1,181 @@
+name: Legal Agent RAGAS Evaluation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_DB: legal_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('apps/api/src/legal-agent/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      working-directory: apps/api/src/legal-agent
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Wait for PostgreSQL
+      run: |
+        until pg_isready -h localhost -p 5432 -U postgres; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+        echo "PostgreSQL is ready!"
+    
+    - name: Run unit tests
+      working-directory: apps/api/src/legal-agent
+      run: |
+        python test_agent.py
+    
+    - name: Run RAGAS Evaluation
+      working-directory: apps/api/src/legal-agent
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        PG_HOST: localhost
+        PG_PORT: 5432
+        PG_DATABASE: legal_db
+        PG_USER: postgres
+        PG_PASSWORD: postgres
+        FAITHFULNESS_THRESHOLD: 0.85
+      run: |
+        python legal_agent.py
+    
+    - name: Check evaluation results
+      run: |
+        if [ $? -eq 0 ]; then
+          echo "✅ RAGAS evaluation passed - faithfulness threshold met"
+        else
+          echo "❌ RAGAS evaluation failed - faithfulness below threshold"
+          exit 1
+        fi
+    
+    - name: Upload evaluation results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: ragas-evaluation-results
+        path: apps/api/src/legal-agent/golden_set.json
+        retention-days: 30
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: evaluate
+    
+    services:
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_DB: legal_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      working-directory: apps/api/src/legal-agent
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Test agent integration
+      working-directory: apps/api/src/legal-agent
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        PG_HOST: localhost
+        PG_PORT: 5432
+        PG_DATABASE: legal_db
+        PG_USER: postgres
+        PG_PASSWORD: postgres
+      run: |
+        # Test basic agent functionality
+        python -c "
+        from legal_agent import Config, PgVectorStore, LegalReActAgent
+        import json
+        
+        config = Config()
+        vector_store = PgVectorStore(config)
+        agent = LegalReActAgent(config, vector_store)
+        
+        # Test a simple query
+        result = agent.run('What are the liability terms?')
+        print('Agent test result:', result.get('output', 'No output'))
+        
+        vector_store.close()
+        print('✅ Integration test passed')
+        "
+    
+    - name: Test tools individually
+      working-directory: apps/api/src/legal-agent
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        PG_HOST: localhost
+        PG_PORT: 5432
+        PG_DATABASE: legal_db
+        PG_USER: postgres
+        PG_PASSWORD: postgres
+      run: |
+        python -c "
+        from legal_agent import Config, PgVectorStore, LegalTools
+        
+        config = Config()
+        vector_store = PgVectorStore(config)
+        tools = LegalTools(vector_store)
+        
+        # Test clause extraction
+        test_doc = 'LIABILITY CLAUSE: The company has unlimited liability.'
+        result = tools.extract_clauses(test_doc)
+        print('Clause extraction test passed')
+        
+        # Test risk scoring
+        risk_result = tools.score_risk('The company has unlimited liability.')
+        print('Risk scoring test passed')
+        
+        vector_store.close()
+        print('✅ Tools test passed')
+        "
