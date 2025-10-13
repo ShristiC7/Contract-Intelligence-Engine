@@ -31,40 +31,161 @@ export interface AnalysisResult {
   checkpoints: JobCheckpoint[];
 }
 
-// Mock Redis for testing when Redis is not available
-const redisConnection = process.env.NODE_ENV === 'test' ? {
-  exists: async () => 0,
-  setex: async () => 'OK',
-  get: async () => null,
-  set: async () => 'OK',
-  del: async () => 1,
-  quit: async () => 'OK'
-} : new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: Number(process.env.REDIS_PORT || 6379),
-  maxRetriesPerRequest: 3,
-  retryDelayOnFailover: 100,
-  enableReadyCheck: false,
-  lazyConnect: true
-});
+// Mock Redis for testing when Redis is not available or for development
+const createRedisConnection = () => {
+  if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development' || !process.env.REDIS_HOST) {
+    return {
+      exists: async () => 0,
+      setex: async () => 'OK',
+      get: async () => null,
+      set: async () => 'OK',
+      del: async () => 1,
+      quit: async () => 'OK'
+    };
+  }
+  return new Redis({
+    host: process.env.REDIS_HOST || 'localhost',
+    port: Number(process.env.REDIS_PORT || 6379),
+    maxRetriesPerRequest: null,
+    retryDelayOnFailover: 100,
+    enableReadyCheck: false,
+    lazyConnect: true
+  });
+};
 
-export const contractQueue = new Queue<ContractJobData>('contract-analysis', {
-  connection: redisConnection,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 2000 },
-    removeOnComplete: { count: 100, age: 24 * 3600 },
-    removeOnFail: false,
-  },
-});
+// Only create Redis connection and queues if Redis is available
+const isRedisAvailable = process.env.REDIS_HOST || process.env.NODE_ENV === 'production';
 
-export const deadLetterQueue = new Queue('contract-analysis-dlq', {
-  connection: redisConnection,
-});
+// Lazy initialization of queues
+let contractQueue: Queue<ContractJobData> | null = null;
+let deadLetterQueue: Queue | null = null;
+let queueEvents: QueueEvents | null = null;
+let worker: Worker<ContractJobData> | null = null;
 
-export const queueEvents = new QueueEvents('contract-analysis', {
-  connection: redisConnection,
-});
+const initializeQueues = () => {
+  if (!isRedisAvailable) return;
+  
+  const redisConnection = createRedisConnection();
+  
+  contractQueue = new Queue<ContractJobData>('contract-analysis', {
+    connection: redisConnection,
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 2000 },
+      removeOnComplete: { count: 100, age: 24 * 3600 },
+      removeOnFail: false,
+    },
+  });
+
+  deadLetterQueue = new Queue('contract-analysis-dlq', {
+    connection: redisConnection,
+  });
+
+  queueEvents = new QueueEvents('contract-analysis', {
+    connection: redisConnection,
+  });
+
+  worker = new Worker<ContractJobData>(
+    'contract-analysis',
+    traceBullMQJob('contract-analysis', async (job: Job<ContractJobData>) => {
+      const { filePath, contractId, userId } = job.data;
+      await job.updateProgress(5);
+      const fileHash = await calculateFileHash(filePath);
+
+      const alreadyProcessed = await checkIdempotency(fileHash);
+      if (alreadyProcessed) {
+        await job.updateProgress(100);
+        const checkpoints = await getCheckpointsForContract(contractId);
+        return { contractId, fileHash, ocrText: '', chunks: [], embeddings: [], agentAnalysis: { skipped: true }, checkpoints } satisfies AnalysisResult;
+      }
+
+      await storeCheckpoint(contractId, 'hash_checked', { fileHash });
+      await job.updateProgress(10);
+
+      const ocrText = await ocrPdf(filePath, (p) => job.updateProgress(10 + p * 0.3));
+      await storeCheckpoint(contractId, 'ocr_completed', { textLength: ocrText.length });
+      await job.updateProgress(40);
+
+      const chunks = chunkText(ocrText);
+      await job.updateProgress(50);
+      const embeddings = await generateEmbeddings(chunks);
+      await storeCheckpoint(contractId, 'embeddings_generated', { chunkCount: chunks.length, embeddingDim: embeddings[0]?.length ?? 0 });
+      await job.updateProgress(60);
+
+      const agentAnalysis = await runAgentLoop(ocrText, chunks, embeddings);
+      await storeCheckpoint(contractId, 'agent_analysis_completed', { analysisKeys: Object.keys(agentAnalysis as Record<string, unknown>) });
+      await job.updateProgress(90);
+
+      const checkpoints = await getCheckpointsForContract(contractId);
+      const result: AnalysisResult = { contractId, fileHash, ocrText, chunks, embeddings, agentAnalysis, checkpoints };
+      await markAsProcessed(fileHash, result);
+      await storeCheckpoint(contractId, 'completed', { success: true });
+      await job.updateProgress(100);
+      return result;
+    }),
+    { connection: redisConnection, concurrency: 5 }
+  );
+
+  if (worker) {
+    worker.on('failed', async (job, err) => {
+      if (job && job.attemptsMade >= 3 && deadLetterQueue) {
+        await deadLetterQueue.add('failed-contract-analysis', {
+          originalJobId: job.id,
+          jobData: job.data,
+          error: err.message,
+          failedAt: new Date(),
+          attempts: job.attemptsMade,
+        });
+      }
+    });
+
+    worker.on('completed', (job) => {
+      // eslint-disable-next-line no-console
+      console.log(`Job ${job.id} completed successfully`);
+    });
+
+    worker.on('progress', (job, progress) => {
+      // eslint-disable-next-line no-console
+      console.log(`Job ${job.id} progress: ${progress}%`);
+    });
+  }
+
+  if (queueEvents) {
+    queueEvents.on('failed', ({ jobId, failedReason }) => {
+      // eslint-disable-next-line no-console
+      console.log(`Job ${jobId} failed with reason: ${failedReason}`);
+    });
+  }
+};
+
+// Export getters for the queues
+export const getContractQueue = () => {
+  if (!contractQueue && isRedisAvailable) {
+    initializeQueues();
+  }
+  return contractQueue;
+};
+
+export const getDeadLetterQueue = () => {
+  if (!deadLetterQueue && isRedisAvailable) {
+    initializeQueues();
+  }
+  return deadLetterQueue;
+};
+
+export const getQueueEvents = () => {
+  if (!queueEvents && isRedisAvailable) {
+    initializeQueues();
+  }
+  return queueEvents;
+};
+
+export const getWorker = () => {
+  if (!worker && isRedisAvailable) {
+    initializeQueues();
+  }
+  return worker;
+};
 
 const prisma = new PrismaClient();
 
@@ -79,12 +200,16 @@ async function calculateFileHash(filePath: string): Promise<string> {
 }
 
 async function checkIdempotency(fileHash: string): Promise<boolean> {
+  if (!isRedisAvailable) return false;
+  const redisConnection = createRedisConnection();
   const key = `processed:${fileHash}`;
   const exists = await redisConnection.exists(key);
   return exists === 1;
 }
 
 async function markAsProcessed(fileHash: string, result: unknown): Promise<void> {
+  if (!isRedisAvailable) return;
+  const redisConnection = createRedisConnection();
   const key = `processed:${fileHash}`;
   await redisConnection.setex(key, 7 * 24 * 3600, JSON.stringify(result));
 }
@@ -247,81 +372,24 @@ async function runAgentLoop(text: string, chunks: string[], embeddings: number[]
   throw new Error(`Agent loop failed after ${config.maxRetries} attempts: ${lastError?.message}`);
 }
 
-export const worker = new Worker<ContractJobData>(
-  'contract-analysis',
-  traceBullMQJob('contract-analysis', async (job: Job<ContractJobData>) => {
-    const { filePath, contractId, userId } = job.data;
-    await job.updateProgress(5);
-    const fileHash = await calculateFileHash(filePath);
 
-    const alreadyProcessed = await checkIdempotency(fileHash);
-    if (alreadyProcessed) {
-      await job.updateProgress(100);
-      const checkpoints = await getCheckpointsForContract(contractId);
-      return { contractId, fileHash, ocrText: '', chunks: [], embeddings: [], agentAnalysis: { skipped: true }, checkpoints } satisfies AnalysisResult;
-    }
-
-    await storeCheckpoint(contractId, 'hash_checked', { fileHash });
-    await job.updateProgress(10);
-
-    const ocrText = await ocrPdf(filePath, (p) => job.updateProgress(10 + p * 0.3));
-    await storeCheckpoint(contractId, 'ocr_completed', { textLength: ocrText.length });
-    await job.updateProgress(40);
-
-    const chunks = chunkText(ocrText);
-    await job.updateProgress(50);
-    const embeddings = await generateEmbeddings(chunks);
-    await storeCheckpoint(contractId, 'embeddings_generated', { chunkCount: chunks.length, embeddingDim: embeddings[0]?.length ?? 0 });
-    await job.updateProgress(60);
-
-    const agentAnalysis = await runAgentLoop(ocrText, chunks, embeddings);
-    await storeCheckpoint(contractId, 'agent_analysis_completed', { analysisKeys: Object.keys(agentAnalysis as Record<string, unknown>) });
-    await job.updateProgress(90);
-
-    const checkpoints = await getCheckpointsForContract(contractId);
-    const result: AnalysisResult = { contractId, fileHash, ocrText, chunks, embeddings, agentAnalysis, checkpoints };
-    await markAsProcessed(fileHash, result);
-    await storeCheckpoint(contractId, 'completed', { success: true });
-    await job.updateProgress(100);
-    return result;
-  }),
-  { connection: redisConnection, concurrency: 5 }
-);
-
-worker.on('failed', async (job, err) => {
-  if (job && job.attemptsMade >= 3) {
-    await deadLetterQueue.add('failed-contract-analysis', {
-      originalJobId: job.id,
-      jobData: job.data,
-      error: err.message,
-      failedAt: new Date(),
-      attempts: job.attemptsMade,
-    });
+export async function analyzeContract(filePath: string, contractId: string, userId: string, metadata?: Record<string, unknown>): Promise<Job<ContractJobData> | null> {
+  const queue = getContractQueue();
+  if (!queue) {
+    console.warn('Contract queue not available (Redis not configured)');
+    return null;
   }
-});
-
-worker.on('completed', (job) => {
-  // eslint-disable-next-line no-console
-  console.log(`Job ${job.id} completed successfully`);
-});
-
-worker.on('progress', (job, progress) => {
-  // eslint-disable-next-line no-console
-  console.log(`Job ${job.id} progress: ${progress}%`);
-});
-
-queueEvents.on('failed', ({ jobId, failedReason }) => {
-  // eslint-disable-next-line no-console
-  console.log(`Job ${jobId} failed with reason: ${failedReason}`);
-});
-
-export async function analyzeContract(filePath: string, contractId: string, userId: string, metadata?: Record<string, unknown>): Promise<Job<ContractJobData>> {
-  const job = await contractQueue.add('analyze-contract', { filePath, contractId, userId, metadata });
+  const job = await queue.add('analyze-contract', { filePath, contractId, userId, metadata });
   return job;
 }
 
-export async function getJobStatus(jobId: string): Promise<{ status: string; progress: number; result?: unknown; checkpoints?: JobCheckpoint[] }> {
-  const job = await contractQueue.getJob(jobId);
+export async function getJobStatus(jobId: string): Promise<{ status: string; progress: number; result?: unknown; checkpoints?: JobCheckpoint[] } | null> {
+  const queue = getContractQueue();
+  if (!queue) {
+    console.warn('Contract queue not available (Redis not configured)');
+    return null;
+  }
+  const job = await queue.getJob(jobId);
   if (!job) throw new Error(`Job ${jobId} not found`);
   const state = await job.getState();
   const progress = (job.progress as number) || 0;
@@ -330,11 +398,22 @@ export async function getJobStatus(jobId: string): Promise<{ status: string; pro
 }
 
 export async function getFailedJobs() {
-  return deadLetterQueue.getJobs(['completed', 'failed', 'delayed']);
+  const dlq = getDeadLetterQueue();
+  if (!dlq) {
+    console.warn('Dead letter queue not available (Redis not configured)');
+    return [];
+  }
+  return dlq.getJobs(['completed', 'failed', 'delayed']);
 }
 
 export async function retryFailedJob(dlqJobId: string) {
-  const dlqJob = await deadLetterQueue.getJob(dlqJobId);
+  const dlq = getDeadLetterQueue();
+  const queue = getContractQueue();
+  if (!dlq || !queue) {
+    console.warn('Queues not available (Redis not configured)');
+    return;
+  }
+  const dlqJob = await dlq.getJob(dlqJobId);
   if (!dlqJob) throw new Error(`DLQ job ${dlqJobId} not found`);
   const originalData = (dlqJob.data as any).jobData as ContractJobData;
   await analyzeContract(originalData.filePath, originalData.contractId, originalData.userId, originalData.metadata);

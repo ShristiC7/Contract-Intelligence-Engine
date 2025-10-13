@@ -2,6 +2,7 @@
 import './telemetry';
 
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import contractsRoutes from './routes/contracts';
 import legalAgentRoutes from './routes/legalAgent';
@@ -9,6 +10,14 @@ import { registerGraphQL } from './graphql';
 import prismaPlugin from './plugins/prisma';
 
 const server = Fastify({ logger: true });
+
+// Register CORS
+await server.register(cors, { origin: true });
+
+// Default route
+server.get('/', async () => {
+  return { message: 'Contract Intelligence Engine Backend Active' };
+});
 
 server.get('/health', async () => ({ status: 'ok' }));
 
