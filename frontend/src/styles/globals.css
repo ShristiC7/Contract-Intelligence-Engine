@@ -1,0 +1,296 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+  /* Light theme - Spring/Summer Legal Tech */
+  --background: #fef9f3;
+  --foreground: #2c1810;
+  --card: #ffffff;
+  --card-foreground: #2c1810;
+  --popover: #ffffff;
+  --popover-foreground: #2c1810;
+  --primary: #ff7b54;
+  --primary-foreground: #ffffff;
+  --secondary: #fff5ed;
+  --secondary-foreground: #2c1810;
+  --muted: #fef3eb;
+  --muted-foreground: #8b6e5f;
+  --accent: #ffebe3;
+  --accent-foreground: #ff7b54;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 123, 84, 0.12);
+  --input: transparent;
+  --input-background: #fffaf6;
+  --switch-background: #ffe5d9;
+  --font-weight-medium: 600;
+  --font-weight-normal: 400;
+  --ring: #ff9a62;
+  
+  /* Warm spring/summer accent colors */
+  --cyan: #ff7b54;
+  --cyan-bright: #ffb380;
+  --gold: #ffb347;
+  --gold-bright: #ffd580;
+  --navy: #2c1810;
+  --navy-light: #5a453a;
+  
+  --chart-1: #ff7b54;
+  --chart-2: #ffb347;
+  --chart-3: #ff9a8b;
+  --chart-4: #4ade80;
+  --chart-5: #ffa94d;
+  --radius: 0.5rem;
+  --sidebar: #fffcfa;
+  --sidebar-foreground: #2c1810;
+  --sidebar-primary: #ff7b54;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fff5ed;
+  --sidebar-accent-foreground: #2c1810;
+  --sidebar-border: rgba(255, 123, 84, 0.12);
+  --sidebar-ring: #ff9a62;
+}
+
+.dark {
+  /* Dark theme - Warm Legal Tech */
+  --background: #0a0a0a;
+  --foreground: #f5f5f4;
+  --card: #1a1512;
+  --card-foreground: #f5f5f4;
+  --popover: #1a1512;
+  --popover-foreground: #f5f5f4;
+  --primary: #fb923c;
+  --primary-foreground: #0a0a0a;
+  --secondary: #292524;
+  --secondary-foreground: #f5f5f4;
+  --muted: #292524;
+  --muted-foreground: #a8a29e;
+  --accent: #44403c;
+  --accent-foreground: #fb923c;
+  --destructive: #dc2626;
+  --destructive-foreground: #fecaca;
+  --border: rgba(251, 146, 60, 0.15);
+  --input: rgba(251, 146, 60, 0.1);
+  --input-background: #1a1512;
+  --switch-background: #44403c;
+  --font-weight-medium: 600;
+  --font-weight-normal: 400;
+  --ring: #fb923c;
+  
+  /* Warm accent colors */
+  --cyan: #fb923c;
+  --cyan-bright: #fdba74;
+  --gold: #fbbf24;
+  --gold-bright: #fcd34d;
+  --navy: #1a1512;
+  --navy-light: #292524;
+  
+  --chart-1: #fb923c;
+  --chart-2: #fbbf24;
+  --chart-3: #f472b6;
+  --chart-4: #4ade80;
+  --chart-5: #f59e0b;
+  --sidebar: #1a1512;
+  --sidebar-foreground: #f5f5f4;
+  --sidebar-primary: #fb923c;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #292524;
+  --sidebar-accent-foreground: #f5f5f4;
+  --sidebar-border: rgba(251, 146, 60, 0.15);
+  --sidebar-ring: #fb923c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-cyan: var(--cyan);
+  --color-cyan-bright: var(--cyan-bright);
+  --color-gold: var(--gold);
+  --color-gold-bright: var(--gold-bright);
+  --color-navy: var(--navy);
+  --color-navy-light: var(--navy-light);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background-image: 
+      linear-gradient(rgba(255, 123, 84, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 123, 84, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  
+  /* Tech grid background pattern */
+  .grid-pattern {
+    background-image: 
+      linear-gradient(rgba(255, 123, 84, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 123, 84, 0.06) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  /* Scan line effect */
+  .scan-lines::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      transparent 50%,
+      rgba(255, 123, 84, 0.02) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+  /* Glow effect */
+  .glow-cyan {
+    box-shadow: 0 0 25px rgba(255, 123, 84, 0.25);
+  }
+  
+  .glow-gold {
+    box-shadow: 0 0 25px rgba(255, 179, 71, 0.25);
+  }
+  
+  /* Animated border glow */
+  @keyframes border-glow {
+    0%, 100% {
+      border-color: rgba(255, 123, 84, 0.2);
+      box-shadow: 0 0 15px rgba(255, 123, 84, 0.15);
+    }
+    50% {
+      border-color: rgba(255, 123, 84, 0.4);
+      box-shadow: 0 0 25px rgba(255, 123, 84, 0.25);
+    }
+  }
+  
+  .border-glow-animate {
+    animation: border-glow 2s ease-in-out infinite;
+  }
+  
+  /* Tech corner accents */
+  .tech-corners::before,
+  .tech-corners::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 2px solid;
+    border-color: var(--cyan);
+  }
+  
+  .tech-corners::before {
+    top: -1px;
+    left: -1px;
+    border-right: none;
+    border-bottom: none;
+  }
+  
+  .tech-corners::after {
+    bottom: -1px;
+    right: -1px;
+    border-left: none;
+    border-top: none;
+  }
+}
+
+/**
+ * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
+ */
+@layer base {
+  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
+    h1 {
+      font-size: var(--text-2xl);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.4;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      font-size: var(--text-xl);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.4;
+      letter-spacing: -0.01em;
+    }
+
+    h3 {
+      font-size: var(--text-lg);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.4;
+      letter-spacing: -0.01em;
+    }
+
+    h4 {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    p {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.6;
+    }
+
+    label {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    button {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    input {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+  }
+}
+
+html {
+  font-size: var(--font-size);
+}
