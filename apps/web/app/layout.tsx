@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className="h-full">
+      <body className="min-h-dvh bg-background text-foreground">{children}</body>
     </html>
   );
 }
