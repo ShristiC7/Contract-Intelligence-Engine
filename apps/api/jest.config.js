@@ -12,8 +12,12 @@ export default {
     '^.+\\.ts$': ['ts-jest', {
       useESM: true,
       tsconfig: {
-        module: 'esnext',
-        target: 'es2022'
+        module: 'ESNext',
+        target: 'ES2022',
+        moduleResolution: 'NodeNext',
+        esModuleInterop: true,
+        resolveJsonModule: true,
+        types: ['jest', 'node']
       }
     }]
   },
