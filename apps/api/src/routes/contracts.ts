@@ -61,7 +61,7 @@ const routes: FastifyPluginCallback = (app: FastifyInstance, _opts, done) => {
     const hasMore = contracts.length > take;
     const sliced = contracts.slice(0, take);
     const nextCursor = hasMore ? sliced[sliced.length - 1]?.id ?? null : null;
-    const items: Contract[] = sliced.map((c) => ({
+    const items: Contract[] = sliced.map((c: any) => ({
       id: c.id,
       filename: 'unknown',
       uploadDate: c.createdAt.toISOString(),
@@ -78,13 +78,13 @@ const routes: FastifyPluginCallback = (app: FastifyInstance, _opts, done) => {
     if (!existing) return { contractId: id, riskSummary: {}, clauseCount: 0 };
     if (body.filePath) {
       const job = await analyzeContract(body.filePath, id, existing.userId);
-      return { jobId: job.id, contractId: id };
+      return { jobId: job?.id ?? 'n/a', contractId: id };
     }
     return { contractId: id, riskSummary: {}, clauseCount: body.sections?.length ?? 0 };
   });
 
   // GET /status/:jobId - get job status
-  app.get('/status/:jobId', async function handler(req) {
+  app.get('/status/:jobId', async function handler(req, reply) {
     const { jobId } = req.params as { jobId: string };
     try {
       const status = await getJobStatus(jobId);

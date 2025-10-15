@@ -85,7 +85,7 @@ export class LegalAgentService {
       const response = await this.client.get('/health');
       return response.data.status === 'healthy';
     } catch (error) {
-      console.warn('Legal agent service not available, using fallback mode:', error.message);
+      console.warn('Legal agent service not available, using fallback mode:', (error as Error).message);
       return false; // Return false but don't throw error
     }
   }
@@ -102,7 +102,7 @@ export class LegalAgentService {
         const response = await this.client.post('/analyze/document', request);
         return response.data;
       } catch (error) {
-        console.warn('Document analysis failed, using fallback:', error.message);
+        console.warn('Document analysis failed, using fallback:', (error as Error).message);
         // Return fallback analysis
         return {
           success: true,
@@ -129,7 +129,7 @@ export class LegalAgentService {
       });
       return response.data;
     } catch (error) {
-      console.warn('Clause extraction failed, using fallback:', error.message);
+      console.warn('Clause extraction failed, using fallback:', (error as Error).message);
       // Return fallback clause extraction
       const words = documentText.split(/\s+/);
       const clauses = words.length > 10 ? [

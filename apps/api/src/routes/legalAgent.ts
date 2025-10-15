@@ -31,7 +31,7 @@ const routes: FastifyPluginCallback = (app: FastifyInstance, _opts, done) => {
       };
 
       if (!document_text) {
-        return this.httpErrors.badRequest('document_text is required');
+      return { statusCode: 400, error: 'Bad Request', message: 'document_text is required' };
       }
 
       const result = await legalAgentService.analyzeDocument({
@@ -41,8 +41,8 @@ const routes: FastifyPluginCallback = (app: FastifyInstance, _opts, done) => {
 
       return result;
     } catch (error) {
-      this.log.error('Legal agent analysis error:', error);
-      return this.httpErrors.internalServerError('Analysis failed');
+      this.log.error({ err: error }, 'Legal agent analysis error');
+      return { statusCode: 500, error: 'Internal Server Error', message: 'Analysis failed' };
     }
   });
 
@@ -52,14 +52,14 @@ const routes: FastifyPluginCallback = (app: FastifyInstance, _opts, done) => {
       const { document_text } = req.body as { document_text: string };
 
       if (!document_text) {
-        return this.httpErrors.badRequest('document_text is required');
+      return { statusCode: 400, error: 'Bad Request', message: 'document_text is required' };
       }
 
       const result = await legalAgentService.extractClauses(document_text);
       return result;
     } catch (error) {
-      this.log.error('Clause extraction error:', error);
-      return this.httpErrors.internalServerError('Clause extraction failed');
+      this.log.error({ err: error }, 'Clause extraction error');
+      return { statusCode: 500, error: 'Internal Server Error', message: 'Clause extraction failed' };
     }
   });
 
@@ -72,14 +72,14 @@ const routes: FastifyPluginCallback = (app: FastifyInstance, _opts, done) => {
       };
 
       if (!query) {
-        return this.httpErrors.badRequest('query is required');
+      return { statusCode: 400, error: 'Bad Request', message: 'query is required' };
       }
 
       const result = await legalAgentService.searchClauses({ query, limit });
       return result;
     } catch (error) {
-      this.log.error('Clause search error:', error);
-      return this.httpErrors.internalServerError('Clause search failed');
+      this.log.error({ err: error }, 'Clause search error');
+      return { statusCode: 500, error: 'Internal Server Error', message: 'Clause search failed' };
     }
   });
 
@@ -89,14 +89,14 @@ const routes: FastifyPluginCallback = (app: FastifyInstance, _opts, done) => {
       const { clause_text } = req.body as { clause_text: string };
 
       if (!clause_text) {
-        return this.httpErrors.badRequest('clause_text is required');
+      return { statusCode: 400, error: 'Bad Request', message: 'clause_text is required' };
       }
 
       const result = await legalAgentService.scoreRisk(clause_text);
       return result;
     } catch (error) {
-      this.log.error('Risk scoring error:', error);
-      return this.httpErrors.internalServerError('Risk scoring failed');
+      this.log.error({ err: error }, 'Risk scoring error');
+      return { statusCode: 500, error: 'Internal Server Error', message: 'Risk scoring failed' };
     }
   });
 
@@ -106,8 +106,8 @@ const routes: FastifyPluginCallback = (app: FastifyInstance, _opts, done) => {
       const result = await legalAgentService.getStats();
       return result;
     } catch (error) {
-      this.log.error('Stats retrieval error:', error);
-      return this.httpErrors.internalServerError('Stats retrieval failed');
+      this.log.error({ err: error }, 'Stats retrieval error');
+      return { statusCode: 500, error: 'Internal Server Error', message: 'Stats retrieval failed' };
     }
   });
 
@@ -117,14 +117,14 @@ const routes: FastifyPluginCallback = (app: FastifyInstance, _opts, done) => {
       const { document_text } = req.body as { document_text: string };
 
       if (!document_text) {
-        return this.httpErrors.badRequest('document_text is required');
+      return { statusCode: 400, error: 'Bad Request', message: 'document_text is required' };
       }
 
       const result = await legalAgentService.comprehensiveAnalysis(document_text);
       return result;
     } catch (error) {
-      this.log.error('Comprehensive analysis error:', error);
-      return this.httpErrors.internalServerError('Comprehensive analysis failed');
+      this.log.error({ err: error }, 'Comprehensive analysis error');
+      return { statusCode: 500, error: 'Internal Server Error', message: 'Comprehensive analysis failed' };
     }
   });
 

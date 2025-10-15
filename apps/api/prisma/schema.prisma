@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -41,7 +41,7 @@ model AnalysisCheckpoint {
   id         String   @id @default(cuid())
   contractId String   @map("contract_id")
   step       String
-  data       String
+  data       Json
   createdAt  DateTime @default(now()) @map("created_at")
 
   contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)

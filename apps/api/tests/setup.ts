@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, beforeEach } from '@jest/globals';
+// Jest globals are available without import when types are configured
 
 // Global test setup
 beforeAll(async () => {
