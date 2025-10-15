@@ -6,7 +6,7 @@
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
-import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
+import { MeterProvider, PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import { FastifyInstrumentation } from '@opentelemetry/instrumentation-fastify';
@@ -25,27 +25,27 @@ const sdk = new NodeSDK({
   traceExporter: new OTLPTraceExporter({
     url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/traces',
   }),
-  metricReader: new PeriodicExportingMetricReader({
+  metricReader: new (PeriodicExportingMetricReader as any)({
     exporter: new OTLPMetricExporter({
       url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/metrics',
     }),
     exportIntervalMillis: 10000,
-  }),
+  }) as any,
   instrumentations: [
     new HttpInstrumentation({
-      requestHook: (span, request) => {
+      requestHook: (span, request: any) => {
         span.setAttributes({
           'http.request.body.size': request.headers['content-length'] || 0,
         });
       },
-      responseHook: (span, response) => {
+      responseHook: (span, response: any) => {
         span.setAttributes({
           'http.response.body.size': response.headers['content-length'] || 0,
         });
       },
     }),
     new FastifyInstrumentation({
-      requestHook: (span, info) => {
+      requestHook: (span, info: any) => {
         span.setAttributes({
           'fastify.route': info.route?.path || 'unknown',
           'fastify.method': info.request.method,
