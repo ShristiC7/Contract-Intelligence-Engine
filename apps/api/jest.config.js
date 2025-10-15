@@ -17,7 +17,7 @@ export default {
       }
     }]
   },
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1'
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
