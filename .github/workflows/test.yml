@@ -68,16 +68,17 @@ jobs:
         REDIS_HOST: localhost
         REDIS_PORT: 6379
     
-    - name: Run integration tests
-      run: cd apps/api && pnpm test:integration
+    - name: Run integration tests (Docker-based)
+      if: ${{ runner.os == 'Linux' }}
+      run: cd apps/api && DOCKER_AVAILABLE=true pnpm test:integration
       env:
         NODE_ENV: test
         DATABASE_URL: postgresql://test:test@localhost:5432/test_db
         REDIS_HOST: localhost
         REDIS_PORT: 6379
     
-    - name: Run all tests with coverage
-      run: cd apps/api && pnpm test:coverage
+    - name: Run all tests with coverage (unit only)
+      run: cd apps/api && pnpm test:coverage -- --testPathIgnorePatterns=integration
       env:
         NODE_ENV: test
         DATABASE_URL: postgresql://test:test@localhost:5432/test_db

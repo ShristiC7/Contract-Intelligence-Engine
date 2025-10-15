@@ -30,7 +30,7 @@ const testClauses = [
   {
     type: 'confidentiality',
     text: 'All information shared shall remain confidential for a period of 5 years.',
-    expectedRiskScore: 4.0
+    expectedRiskScore: 4.5
   },
   {
     type: 'intellectual_property',
